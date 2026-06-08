@@ -1,9 +1,9 @@
 "use client";
 
-import { Users, User, Truck, Package, ArrowRight, Trash2 } from "lucide-react";
+import { Users, User, Truck, Package, ArrowRight, Trash2, Building2 } from "lucide-react";
 import { Job } from "./JobCard";
 import UKPlate, { extractReg } from "./UKPlate";
-import { buildTeamPlan, convoyDescription, soloDescription, PlanStep, Stop } from "@/lib/teamPlan";
+import { buildTeamPlan, convoyDescription, soloDescription, needsDepotReturn, PlanStep, Stop } from "@/lib/teamPlan";
 
 interface Props {
   jobs: Job[];
@@ -36,24 +36,66 @@ function StopCard({ stop, label, onJobDeleted }: { stop: Stop; label?: string; o
       {stop.jobs.map((sj, i) => {
         const reg = extractReg(sj.job.notes);
         return (
-          <div key={i} className="flex items-center justify-between gap-2">
-            <p className="text-xs text-gray-600 flex items-start gap-1 flex-1 min-w-0">
+          <div key={i} className="space-y-1">
+            <div className="flex items-center gap-2 flex-wrap">
               {jobIcon(sj.job.type)}
-              <span>{soloDescription(sj)}</span>
-            </p>
-            <div className="flex items-center gap-1.5 flex-shrink-0">
+              <span className={`text-sm font-semibold capitalize ${sj.job.type === "delivery" ? "text-blue-700" : "text-purple-700"}`}>
+                {sj.job.type}
+              </span>
+              {sj.ccAction === "deliver" && (
+                <span className="text-xs px-1.5 py-0.5 rounded-full font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                  + Drop CC
+                </span>
+              )}
+              {sj.ccAction === "collect" && (
+                <span className="text-xs px-1.5 py-0.5 rounded-full font-medium bg-teal-50 text-teal-700 border border-teal-200">
+                  + Collect CC
+                </span>
+              )}
               {reg && <UKPlate reg={reg} size="sm" />}
               <button
                 onClick={() => deleteJob(sj.job.id, sj.job.customerName, onJobDeleted)}
-                className="text-gray-300 hover:text-red-500"
+                className="text-gray-300 hover:text-red-500 ml-auto"
                 title="Delete job"
               >
                 <Trash2 className="w-3.5 h-3.5" />
               </button>
             </div>
+            <p className="text-xs text-gray-500 pl-5">{soloDescription(sj)}</p>
           </div>
         );
       })}
+    </div>
+  );
+}
+
+function DepotMarker({ label, final = false }: { label: string; final?: boolean }) {
+  return (
+    <div className="flex gap-3 items-start py-1">
+      <div className="flex flex-col items-center gap-1 flex-shrink-0">
+        <div className="w-7 h-7 rounded-full bg-gray-900 flex items-center justify-center flex-shrink-0">
+          <Building2 className="w-3.5 h-3.5 text-white" />
+        </div>
+        {!final && <div className="w-0.5 h-4 bg-gray-200" />}
+      </div>
+      <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide pt-1.5">{label}</span>
+    </div>
+  );
+}
+
+function DirectConnector() {
+  return (
+    <div className="flex gap-3 items-start py-1">
+      <div className="flex flex-col items-center gap-1 flex-shrink-0">
+        <div className="w-7 h-7 rounded-full bg-green-100 border-2 border-green-400 flex items-center justify-center flex-shrink-0">
+          <ArrowRight className="w-3.5 h-3.5 text-green-600" />
+        </div>
+        <div className="w-0.5 h-4 bg-green-200" />
+      </div>
+      <div className="pt-1">
+        <span className="text-xs font-semibold text-green-700 uppercase tracking-wide">No depot return needed</span>
+        <p className="text-xs text-green-600 mt-0.5">Drive directly to the next stop</p>
+      </div>
     </div>
   );
 }
@@ -80,41 +122,49 @@ function ConvoyStep({ stop, stepNumber, onJobDeleted }: { stop: Stop; stepNumber
         </div>
 
         <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 space-y-2">
-          {/* Header: name/address left, plate(s) top-right */}
-          <div className="flex items-start justify-between gap-3">
-            <div className="min-w-0">
-              <p className="font-semibold text-gray-800 text-sm">
-                {stop.jobs[0].job.customerName}
-                {stop.jobs.length > 1 && (
-                  <span className="ml-1.5 text-xs font-normal text-gray-400">({stop.jobs.length} jobs here)</span>
-                )}
-              </p>
-              <p className="text-xs text-gray-500">{stop.address}, {stop.postcode}</p>
-            </div>
-            <div className="flex flex-col gap-1 flex-shrink-0">
-              {stop.jobs.map((sj, i) => {
-                const reg = extractReg(sj.job.notes);
-                return reg ? <UKPlate key={i} reg={reg} size="lg" /> : null;
-              })}
-            </div>
+          {/* Header: name + address only */}
+          <div>
+            <p className="font-semibold text-gray-800 text-sm">
+              {stop.jobs[0].job.customerName}
+              {stop.jobs.length > 1 && (
+                <span className="ml-1.5 text-xs font-normal text-gray-400">({stop.jobs.length} jobs here)</span>
+              )}
+            </p>
+            <p className="text-xs text-gray-500">{stop.address}, {stop.postcode}</p>
           </div>
 
-          {/* Job rows: type + delete only */}
-          {stop.jobs.map((sj, i) => (
-            <div key={i} className="flex items-center justify-between gap-2">
-              <div className="flex items-center gap-1.5 text-xs text-gray-700">
-                {jobIcon(sj.job.type)}
-                <span className="capitalize">{sj.job.type}</span>
+          {/* Job rows: type + CC badge + plate + delete */}
+          {stop.jobs.map((sj, i) => {
+            const reg = extractReg(sj.job.notes);
+            return (
+              <div key={i} className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-2 flex-1 min-w-0 flex-wrap">
+                  {jobIcon(sj.job.type)}
+                  <span className={`text-sm font-semibold capitalize ${sj.job.type === "delivery" ? "text-blue-700" : "text-purple-700"}`}>
+                    {sj.job.type}
+                  </span>
+                  {sj.ccAction === "deliver" && (
+                    <span className="text-xs px-1.5 py-0.5 rounded-full font-medium bg-amber-50 text-amber-700 border border-amber-200">
+                      + Drop CC
+                    </span>
+                  )}
+                  {sj.ccAction === "collect" && (
+                    <span className="text-xs px-1.5 py-0.5 rounded-full font-medium bg-teal-50 text-teal-700 border border-teal-200">
+                      + Collect CC
+                    </span>
+                  )}
+                  {reg && <UKPlate reg={reg} size="md" />}
+                </div>
+                <button
+                  onClick={() => deleteJob(sj.job.id, sj.job.customerName, onJobDeleted)}
+                  className="text-gray-300 hover:text-red-500 flex-shrink-0"
+                  title="Delete job"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
               </div>
-              <button
-                onClick={() => deleteJob(sj.job.id, sj.job.customerName, onJobDeleted)}
-                className="text-gray-300 hover:text-red-500"
-                title="Delete job"
-              >
-                <Trash2 className="w-3.5 h-3.5" />
-              </button>
-            </div>
-          ))}
+            );
+          })}
 
           <p className="text-xs text-gray-500 pt-1 border-t border-orange-100">
             {convoyDescription(stop)}
@@ -196,13 +246,24 @@ export default function TeamPlan({ jobs, onJobDeleted }: Props) {
       )}
 
       <div className="space-y-0">
-        {plan.map((step, i) =>
-          step.kind === "convoy" ? (
-            <ConvoyStep key={i} stop={step.stop} stepNumber={i + 1} onJobDeleted={onJobDeleted} />
-          ) : (
-            <SplitStep key={i} step={step} stepNumber={i + 1} onJobDeleted={onJobDeleted} />
-          )
-        )}
+        <DepotMarker label="Depart depot" />
+
+        {plan.map((step, i) => (
+          <div key={i}>
+            {step.kind === "convoy" ? (
+              <ConvoyStep stop={step.stop} stepNumber={i + 1} onJobDeleted={onJobDeleted} />
+            ) : (
+              <SplitStep step={step} stepNumber={i + 1} onJobDeleted={onJobDeleted} />
+            )}
+            {i < plan.length - 1 ? (
+              needsDepotReturn(plan, i)
+                ? <DepotMarker label="Return to depot" />
+                : <DirectConnector />
+            ) : (
+              <DepotMarker label="Return to depot — end of day" final />
+            )}
+          </div>
+        ))}
       </div>
     </div>
   );

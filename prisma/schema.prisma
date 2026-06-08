@@ -22,6 +22,7 @@ model Job {
   status       String   @default("pending") // "pending" | "in_progress" | "done" | "cancelled"
   jobDate      DateTime @default(now())
   sortOrder    Int      @default(0)
+  locked       Boolean  @default(false)
 }
 
 model Depot {

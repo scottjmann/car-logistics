@@ -6,6 +6,7 @@ import { Settings, Route, RefreshCw, Users, ListChecks, LogOut, Trash2 } from "l
 import Link from "next/link";
 import JobCard, { Job } from "@/components/JobCard";
 import JobForm from "@/components/JobForm";
+import SortableJobList from "@/components/SortableJobList";
 import DepotModal from "@/components/DepotModal";
 import ImportZone from "@/components/ImportZone";
 import TeamPlan from "@/components/TeamPlan";
@@ -184,9 +185,11 @@ export default function OfficePage() {
                 <TeamPlan jobs={pending} onJobDeleted={fetchJobs} />
               ) : (
                 <div className="space-y-3">
-                  {pending.map((job, i) => (
-                    <JobCard key={job.id} job={job} position={i + 1} onUpdate={fetchJobs} />
-                  ))}
+                  <SortableJobList
+                    jobs={pending}
+                    onUpdate={fetchJobs}
+                    onReorder={(reordered) => setJobs([...reordered, ...done])}
+                  />
                   {done.length > 0 && (
                     <>
                       <p className="text-xs font-medium text-gray-400 uppercase tracking-wide pt-2">Completed</p>

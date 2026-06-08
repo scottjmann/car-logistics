@@ -94,6 +94,57 @@ export function buildTeamPlan(jobs: Job[]): PlanStep[] {
   return plan;
 }
 
+/** After completing this stop, does the driver end up holding a courtesy car? */
+function stopEndsWithCC(stop: Stop): boolean {
+  return (
+    stop.jobs.length === 1 &&
+    stop.jobs[0].job.type === "delivery" &&
+    stop.jobs[0].ccAction === "collect"
+  );
+}
+
+/** Does this stop require the driver to arrive with a courtesy car? */
+function stopNeedsCC(stop: Stop): boolean {
+  return (
+    stop.jobs.length === 1 &&
+    stop.jobs[0].job.type === "collection" &&
+    stop.jobs[0].ccAction === "deliver"
+  );
+}
+
+/**
+ * Returns false when a depot return can be skipped between steps[index] and steps[index+1].
+ *
+ * Two cases:
+ *  - Split→Split: both drivers end with CC and next split both need CC → drive straight there
+ *  - Convoy→Convoy: pure delivery (no CC) followed by pure collection (no CC) →
+ *    both drivers are already in the company car at the first customer, drive straight to second
+ */
+export function needsDepotReturn(steps: PlanStep[], index: number): boolean {
+  if (index >= steps.length - 1) return true;
+
+  const curr = steps[index];
+  const next = steps[index + 1];
+
+  if (curr.kind === "split" && next.kind === "split") {
+    const naturalPairing =
+      stopEndsWithCC(curr.driver1) && stopNeedsCC(next.driver1) &&
+      stopEndsWithCC(curr.driver2) && stopNeedsCC(next.driver2);
+    const swappedPairing =
+      stopEndsWithCC(curr.driver1) && stopNeedsCC(next.driver2) &&
+      stopEndsWithCC(curr.driver2) && stopNeedsCC(next.driver1);
+    if (naturalPairing || swappedPairing) return false;
+  }
+
+  if (curr.kind === "convoy" && next.kind === "convoy") {
+    const currDeliveryOnly = curr.stop.jobs.every(j => j.job.type === "delivery" && j.ccAction === "none");
+    const nextCollectionOnly = next.stop.jobs.every(j => j.job.type === "collection" && j.ccAction === "none");
+    if (currDeliveryOnly && nextCollectionOnly) return false;
+  }
+
+  return true;
+}
+
 export function convoyDescription(stop: Stop): string {
   const deliveries = stop.jobs.filter((s) => s.job.type === "delivery");
   const collections = stop.jobs.filter((s) => s.job.type === "collection");
