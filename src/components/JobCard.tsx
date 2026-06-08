@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { Truck, Package, Trash2, CheckCircle, Circle, ChevronDown, ChevronUp } from "lucide-react";
+import UKPlate, { extractReg } from "./UKPlate";
 
 export interface Job {
   id: string;
@@ -60,6 +61,7 @@ export default function JobCard({ job, position, onUpdate }: Props) {
     onUpdate();
   }
 
+  const reg = extractReg(job.notes);
   const mapsUrl = `https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${job.address}, ${job.postcode}`)}`;
   const isDone = job.status === "done";
 
@@ -81,14 +83,18 @@ export default function JobCard({ job, position, onUpdate }: Props) {
         </div>
 
         <div className="flex-1 min-w-0">
+          {/* Header row: name + plate */}
           <div className="flex items-start justify-between gap-2">
-            <div>
+            <div className="min-w-0">
               <p className="font-semibold text-gray-900 text-sm">{job.customerName}</p>
               <p className="text-xs text-gray-500 mt-0.5">{job.address}, {job.postcode}</p>
             </div>
-            <span className={`flex-shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_COLOUR[job.status]}`}>
-              {STATUS_LABEL[job.status]}
-            </span>
+            <div className="flex flex-col items-end gap-1.5 flex-shrink-0">
+              {reg && <UKPlate reg={reg} />}
+              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_COLOUR[job.status]}`}>
+                {STATUS_LABEL[job.status]}
+              </span>
+            </div>
           </div>
 
           <div className="flex items-center gap-2 mt-2">
@@ -117,7 +123,7 @@ export default function JobCard({ job, position, onUpdate }: Props) {
           <button onClick={cycleStatus} title="Cycle status" className="text-gray-400 hover:text-green-600">
             {isDone ? <CheckCircle className="w-5 h-5 text-green-500" /> : <Circle className="w-5 h-5" />}
           </button>
-          <button onClick={deleteJob} title="Delete" className="text-gray-300 hover:text-red-500">
+          <button onClick={deleteJob} title="Delete job" className="text-gray-300 hover:text-red-500">
             <Trash2 className="w-4 h-4" />
           </button>
         </div>

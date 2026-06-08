@@ -2,7 +2,7 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Settings, Route, RefreshCw, Users, ListChecks, LogOut } from "lucide-react";
+import { Settings, Route, RefreshCw, Users, ListChecks, LogOut, Trash2 } from "lucide-react";
 import Link from "next/link";
 import JobCard, { Job } from "@/components/JobCard";
 import JobForm from "@/components/JobForm";
@@ -32,6 +32,12 @@ export default function OfficePage() {
   async function logout() {
     await fetch("/api/auth/logout", { method: "POST" });
     router.push("/login");
+  }
+
+  async function clearDay() {
+    if (!confirm(`Delete all jobs for ${date}? This cannot be undone.`)) return;
+    await fetch(`/api/jobs?date=${date}`, { method: "DELETE" });
+    fetchJobs();
   }
 
   const fetchJobs = useCallback(async () => {
@@ -129,6 +135,14 @@ export default function OfficePage() {
           </button>
 
           <JobForm onCreated={fetchJobs} defaultDate={date} />
+
+          {jobs.length > 0 && (
+            <button onClick={clearDay}
+              className="flex items-center gap-1.5 text-sm font-semibold px-3 py-2 rounded-lg border border-red-200 text-red-600 hover:bg-red-50 ml-auto">
+              <Trash2 className="w-4 h-4" />
+              Clear day
+            </button>
+          )}
         </div>
 
         <ImportZone onImported={fetchJobs} date={date} />
@@ -167,7 +181,7 @@ export default function OfficePage() {
 
               {/* View content */}
               {view === "team" ? (
-                <TeamPlan jobs={pending} />
+                <TeamPlan jobs={pending} onJobDeleted={fetchJobs} />
               ) : (
                 <div className="space-y-3">
                   {pending.map((job, i) => (

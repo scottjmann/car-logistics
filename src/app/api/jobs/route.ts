@@ -40,3 +40,16 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json(job, { status: 201 });
 }
+
+export async function DELETE(req: NextRequest) {
+  const { searchParams } = new URL(req.url);
+  const date = searchParams.get("date");
+  if (!date) return NextResponse.json({ error: "date required" }, { status: 400 });
+
+  const start = new Date(`${date}T00:00:00`);
+  const end = new Date(start);
+  end.setDate(end.getDate() + 1);
+
+  await prisma.job.deleteMany({ where: { jobDate: { gte: start, lt: end } } });
+  return new NextResponse(null, { status: 204 });
+}

@@ -1,11 +1,13 @@
 "use client";
 
-import { Users, User, Truck, Package, ArrowRight } from "lucide-react";
+import { Users, User, Truck, Package, ArrowRight, Trash2 } from "lucide-react";
 import { Job } from "./JobCard";
+import UKPlate, { extractReg } from "./UKPlate";
 import { buildTeamPlan, convoyDescription, soloDescription, PlanStep, Stop } from "@/lib/teamPlan";
 
 interface Props {
   jobs: Job[];
+  onJobDeleted: () => void;
 }
 
 function jobIcon(type: string) {
@@ -14,7 +16,13 @@ function jobIcon(type: string) {
     : <Package className="w-3.5 h-3.5 inline-block mr-1 text-purple-500" />;
 }
 
-function StopCard({ stop, label }: { stop: Stop; label?: string }) {
+async function deleteJob(id: string, name: string, onDone: () => void) {
+  if (!confirm(`Delete job for ${name}?`)) return;
+  await fetch(`/api/jobs/${id}`, { method: "DELETE" });
+  onDone();
+}
+
+function StopCard({ stop, label, onJobDeleted }: { stop: Stop; label?: string; onJobDeleted: () => void }) {
   return (
     <div className="flex-1 min-w-0 bg-white rounded-xl border border-gray-200 p-3 space-y-1.5">
       {label && <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide">{label}</p>}
@@ -25,17 +33,32 @@ function StopCard({ stop, label }: { stop: Stop; label?: string }) {
         )}
       </p>
       <p className="text-xs text-gray-500">{stop.address}, {stop.postcode}</p>
-      {stop.jobs.map((sj, i) => (
-        <p key={i} className="text-xs text-gray-600 flex items-start gap-1">
-          {jobIcon(sj.job.type)}
-          <span>{soloDescription(sj)}</span>
-        </p>
-      ))}
+      {stop.jobs.map((sj, i) => {
+        const reg = extractReg(sj.job.notes);
+        return (
+          <div key={i} className="flex items-center justify-between gap-2">
+            <p className="text-xs text-gray-600 flex items-start gap-1 flex-1 min-w-0">
+              {jobIcon(sj.job.type)}
+              <span>{soloDescription(sj)}</span>
+            </p>
+            <div className="flex items-center gap-1.5 flex-shrink-0">
+              {reg && <UKPlate reg={reg} size="sm" />}
+              <button
+                onClick={() => deleteJob(sj.job.id, sj.job.customerName, onJobDeleted)}
+                className="text-gray-300 hover:text-red-500"
+                title="Delete job"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
 
-function ConvoyStep({ stop, stepNumber }: { stop: Stop; stepNumber: number }) {
+function ConvoyStep({ stop, stepNumber, onJobDeleted }: { stop: Stop; stepNumber: number; onJobDeleted: () => void }) {
   const netBalance = stop.jobs.filter(s => s.job.type === "collection").length
     - stop.jobs.filter(s => s.job.type === "delivery").length;
 
@@ -57,23 +80,39 @@ function ConvoyStep({ stop, stepNumber }: { stop: Stop; stepNumber: number }) {
         </div>
 
         <div className="bg-orange-50 border border-orange-200 rounded-xl p-3 space-y-2">
-          <div>
-            <p className="font-semibold text-gray-800 text-sm">
-              {stop.jobs[0].job.customerName}
-              {stop.jobs.length > 1 && (
-                <span className="ml-1.5 text-xs font-normal text-gray-400">({stop.jobs.length} jobs here)</span>
-              )}
-            </p>
-            <p className="text-xs text-gray-500">{stop.address}, {stop.postcode}</p>
+          {/* Header: name/address left, plate(s) top-right */}
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0">
+              <p className="font-semibold text-gray-800 text-sm">
+                {stop.jobs[0].job.customerName}
+                {stop.jobs.length > 1 && (
+                  <span className="ml-1.5 text-xs font-normal text-gray-400">({stop.jobs.length} jobs here)</span>
+                )}
+              </p>
+              <p className="text-xs text-gray-500">{stop.address}, {stop.postcode}</p>
+            </div>
+            <div className="flex flex-col gap-1 flex-shrink-0">
+              {stop.jobs.map((sj, i) => {
+                const reg = extractReg(sj.job.notes);
+                return reg ? <UKPlate key={i} reg={reg} size="lg" /> : null;
+              })}
+            </div>
           </div>
 
+          {/* Job rows: type + delete only */}
           {stop.jobs.map((sj, i) => (
-            <div key={i} className="flex items-start gap-1.5 text-xs text-gray-700">
-              {jobIcon(sj.job.type)}
-              <span className="capitalize">{sj.job.type}</span>
-              {sj.job.notes?.match(/Vehicle: ([A-Z0-9]+)/)?.[1] && (
-                <span className="text-gray-400">· {sj.job.notes.match(/Vehicle: ([A-Z0-9]+)/)?.[1]}</span>
-              )}
+            <div key={i} className="flex items-center justify-between gap-2">
+              <div className="flex items-center gap-1.5 text-xs text-gray-700">
+                {jobIcon(sj.job.type)}
+                <span className="capitalize">{sj.job.type}</span>
+              </div>
+              <button
+                onClick={() => deleteJob(sj.job.id, sj.job.customerName, onJobDeleted)}
+                className="text-gray-300 hover:text-red-500"
+                title="Delete job"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+              </button>
             </div>
           ))}
 
@@ -89,7 +128,7 @@ function ConvoyStep({ stop, stepNumber }: { stop: Stop; stepNumber: number }) {
   );
 }
 
-function SplitStep({ step, stepNumber }: { step: Extract<PlanStep, { kind: "split" }>; stepNumber: number }) {
+function SplitStep({ step, stepNumber, onJobDeleted }: { step: Extract<PlanStep, { kind: "split" }>; stepNumber: number; onJobDeleted: () => void }) {
   return (
     <div className="flex gap-3 items-start">
       <div className="flex flex-col items-center gap-1 flex-shrink-0 pt-1">
@@ -110,15 +149,15 @@ function SplitStep({ step, stepNumber }: { step: Extract<PlanStep, { kind: "spli
         </div>
 
         <div className="flex gap-2">
-          <StopCard stop={step.driver1} label="Driver 1" />
-          <StopCard stop={step.driver2} label="Driver 2" />
+          <StopCard stop={step.driver1} label="Driver 1" onJobDeleted={onJobDeleted} />
+          <StopCard stop={step.driver2} label="Driver 2" onJobDeleted={onJobDeleted} />
         </div>
       </div>
     </div>
   );
 }
 
-export default function TeamPlan({ jobs }: Props) {
+export default function TeamPlan({ jobs, onJobDeleted }: Props) {
   const plan = buildTeamPlan(jobs);
   const convoyCount = plan.filter((s) => s.kind === "convoy").length;
   const splitCount = plan.filter((s) => s.kind === "split").length;
@@ -132,7 +171,6 @@ export default function TeamPlan({ jobs }: Props) {
 
   return (
     <div className="space-y-4">
-      {/* Summary */}
       <div className="flex gap-4 flex-wrap text-sm">
         <div className="flex items-center gap-1.5">
           <div className="w-3 h-3 rounded-full bg-orange-400" />
@@ -157,13 +195,12 @@ export default function TeamPlan({ jobs }: Props) {
         </div>
       )}
 
-      {/* Steps */}
       <div className="space-y-0">
         {plan.map((step, i) =>
           step.kind === "convoy" ? (
-            <ConvoyStep key={i} stop={step.stop} stepNumber={i + 1} />
+            <ConvoyStep key={i} stop={step.stop} stepNumber={i + 1} onJobDeleted={onJobDeleted} />
           ) : (
-            <SplitStep key={i} step={step} stepNumber={i + 1} />
+            <SplitStep key={i} step={step} stepNumber={i + 1} onJobDeleted={onJobDeleted} />
           )
         )}
       </div>
