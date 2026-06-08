@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { ArrowLeft, RefreshCw, Truck, Package, CheckCircle, Circle, MapPin, Map } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { ArrowLeft, RefreshCw, Truck, Package, CheckCircle, Circle, MapPin, Map, LogOut } from "lucide-react";
 import Link from "next/link";
 import { Job } from "@/components/JobCard";
 import dynamic from "next/dynamic";
@@ -18,6 +19,7 @@ const STATUS_CYCLE: Record<string, string> = {
 };
 
 export default function DriverPage() {
+  const router = useRouter();
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
   const [showMap, setShowMap] = useState(false);
@@ -50,6 +52,11 @@ export default function DriverPage() {
     fetchJobs();
   }
 
+  async function logout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+  }
+
   const pending = jobs.filter((j) => j.status !== "done");
   const done = jobs.filter((j) => j.status === "done");
   const allDone = pending.length === 0 && jobs.length > 0;
@@ -75,6 +82,9 @@ export default function DriverPage() {
           )}
           <button onClick={fetchJobs} className="text-gray-400 hover:text-white p-2">
             <RefreshCw className="w-5 h-5" />
+          </button>
+          <button onClick={logout} className="text-gray-400 hover:text-white p-2" title="Sign out">
+            <LogOut className="w-5 h-5" />
           </button>
         </div>
       </header>

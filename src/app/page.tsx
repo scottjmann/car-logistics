@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useState, useCallback } from "react";
-import { Settings, Route, RefreshCw, Users, ListChecks } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Settings, Route, RefreshCw, Users, ListChecks, LogOut } from "lucide-react";
 import Link from "next/link";
 import JobCard, { Job } from "@/components/JobCard";
 import JobForm from "@/components/JobForm";
@@ -18,6 +19,7 @@ function todayStr() {
 type View = "team" | "jobs";
 
 export default function OfficePage() {
+  const router = useRouter();
   const [date, setDate] = useState(todayStr);
   const [jobs, setJobs] = useState<Job[]>([]);
   const [loading, setLoading] = useState(true);
@@ -26,6 +28,11 @@ export default function OfficePage() {
   const [view, setView] = useState<View>("team");
   const [depotAddress, setDepotAddress] = useState("");
   const [optimiseError, setOptimiseError] = useState<string | null>(null);
+
+  async function logout() {
+    await fetch("/api/auth/logout", { method: "POST" });
+    router.push("/login");
+  }
 
   const fetchJobs = useCallback(async () => {
     setLoading(true);
@@ -98,6 +105,11 @@ export default function OfficePage() {
           <button onClick={() => setShowDepot(true)}
             className="p-2 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-100">
             <Settings className="w-5 h-5" />
+          </button>
+          <button onClick={logout}
+            className="p-2 text-gray-400 hover:text-gray-700 rounded-lg hover:bg-gray-100"
+            title="Sign out">
+            <LogOut className="w-5 h-5" />
           </button>
         </div>
       </header>
