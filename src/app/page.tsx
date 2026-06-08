@@ -2,22 +2,19 @@
 
 import { useEffect, useState, useCallback } from "react";
 import { useRouter } from "next/navigation";
-import { Settings, Route, RefreshCw, Users, ListChecks, LogOut, Trash2 } from "lucide-react";
+import { Settings, Route, RefreshCw, LogOut, Trash2 } from "lucide-react";
 import Link from "next/link";
-import JobCard, { Job } from "@/components/JobCard";
+import { Job } from "@/components/JobCard";
 import JobForm from "@/components/JobForm";
-import SortableJobList from "@/components/SortableJobList";
 import DepotModal from "@/components/DepotModal";
 import ImportZone from "@/components/ImportZone";
-import TeamPlan from "@/components/TeamPlan";
+import CombinedJobPlan from "@/components/CombinedJobPlan";
 import dynamic from "next/dynamic";
 const RouteMap = dynamic(() => import("@/components/RouteMap"), { ssr: false });
 
 function todayStr() {
   return new Date().toISOString().split("T")[0];
 }
-
-type View = "team" | "jobs";
 
 export default function OfficePage() {
   const router = useRouter();
@@ -26,7 +23,6 @@ export default function OfficePage() {
   const [loading, setLoading] = useState(true);
   const [optimising, setOptimising] = useState(false);
   const [showDepot, setShowDepot] = useState(false);
-  const [view, setView] = useState<View>("team");
   const [depotAddress, setDepotAddress] = useState("");
   const [optimiseError, setOptimiseError] = useState<string | null>(null);
 
@@ -79,14 +75,6 @@ export default function OfficePage() {
   const hasJobs = jobs.length > 0;
   const showSideBySide = hasJobs && !!depotAddress;
 
-  function tabClass(t: View) {
-    return `flex items-center gap-1.5 text-sm font-medium px-3 py-1.5 rounded-lg transition-colors ${
-      view === t
-        ? "bg-gray-900 text-white"
-        : "text-gray-500 hover:text-gray-800 hover:bg-gray-100"
-    }`;
-  }
-
   return (
     <div className="min-h-screen bg-gray-50">
       {showDepot && (
@@ -121,10 +109,8 @@ export default function OfficePage() {
         </div>
       </header>
 
-      {/* Use full width when showing side-by-side, otherwise stay narrow */}
       <main className={`mx-auto px-4 py-6 space-y-4 ${showSideBySide ? "max-w-7xl" : "max-w-2xl"}`}>
 
-        {/* Top controls — always full width */}
         <div className="flex items-center gap-3 flex-wrap">
           <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
             className="border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500" />
@@ -154,7 +140,6 @@ export default function OfficePage() {
           </div>
         )}
 
-        {/* Main content area */}
         {loading ? (
           <div className="text-center py-12 text-gray-400">Loading…</div>
         ) : !hasJobs ? (
@@ -165,44 +150,15 @@ export default function OfficePage() {
         ) : (
           <div className={`flex gap-6 items-start ${showSideBySide ? "flex-col lg:flex-row" : ""}`}>
 
-            {/* Left panel — tabs + content */}
-            <div className={`space-y-4 ${showSideBySide ? "lg:flex-1 min-w-0" : "w-full"}`}>
-
-              {/* Tabs + stats */}
-              <div className="flex items-center gap-1 bg-gray-100 rounded-xl p-1 w-fit">
-                <button onClick={() => setView("team")} className={tabClass("team")}>
-                  <Users className="w-4 h-4" />
-                  Team plan
-                </button>
-                <button onClick={() => setView("jobs")} className={tabClass("jobs")}>
-                  <ListChecks className="w-4 h-4" />
-                  Job list
-                </button>
-              </div>
-
-              {/* View content */}
-              {view === "team" ? (
-                <TeamPlan jobs={pending} onJobDeleted={fetchJobs} />
-              ) : (
-                <div className="space-y-3">
-                  <SortableJobList
-                    jobs={pending}
-                    onUpdate={fetchJobs}
-                    onReorder={(reordered) => setJobs([...reordered, ...done])}
-                  />
-                  {done.length > 0 && (
-                    <>
-                      <p className="text-xs font-medium text-gray-400 uppercase tracking-wide pt-2">Completed</p>
-                      {done.map((job) => (
-                        <JobCard key={job.id} job={job} onUpdate={fetchJobs} />
-                      ))}
-                    </>
-                  )}
-                </div>
-              )}
+            <div className={showSideBySide ? "lg:flex-1 min-w-0" : "w-full"}>
+              <CombinedJobPlan
+                jobs={pending}
+                doneJobs={done}
+                onUpdate={fetchJobs}
+                onReorder={(reordered) => setJobs([...reordered, ...done])}
+              />
             </div>
 
-            {/* Right panel — map, always visible, sticky */}
             {showSideBySide && (
               <div className="w-full lg:w-[480px] xl:w-[560px] flex-shrink-0 lg:sticky lg:top-20">
                 <RouteMap jobs={pending} depotAddress={depotAddress} height={600} />

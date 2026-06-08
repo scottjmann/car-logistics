@@ -79,12 +79,25 @@ export default function JobCard({ job, position, onUpdate, dragHandle }: Props) 
   const isDone = job.status === "done";
 
   return (
-    <div className={`bg-white border rounded-xl shadow-sm transition-opacity ${isDone ? "opacity-60" : ""} ${job.locked ? "border-amber-300 bg-amber-50/30" : ""}`}>
-      <div className="flex items-start gap-3 p-4">
-        {/* Drag handle */}
-        <div {...dragHandle} className={`flex-shrink-0 mt-1 ${job.locked ? "text-amber-300 cursor-not-allowed" : "text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing"}`}>
-          <GripVertical className="w-4 h-4" />
+    <div className={`bg-white border rounded-xl shadow-sm transition-opacity overflow-hidden ${isDone ? "opacity-60" : ""} ${job.locked ? "border-amber-400 border-2" : ""}`}>
+      {/* Locked banner */}
+      {job.locked && (
+        <div className="bg-amber-400 px-3 py-1 flex items-center gap-1.5">
+          <Lock className="w-3 h-3 text-amber-900" />
+          <span className="text-xs font-bold text-amber-900 uppercase tracking-wide">Position locked — won&apos;t move when optimising</span>
         </div>
+      )}
+      <div className="flex items-start gap-3 p-4">
+        {/* Drag handle / lock indicator */}
+        {job.locked ? (
+          <div className="flex-shrink-0 mt-1 text-amber-400">
+            <Lock className="w-4 h-4" />
+          </div>
+        ) : (
+          <div {...dragHandle} className="flex-shrink-0 mt-1 text-gray-300 hover:text-gray-500 cursor-grab active:cursor-grabbing">
+            <GripVertical className="w-4 h-4" />
+          </div>
+        )}
 
         {position !== undefined && (
           <span className="flex-shrink-0 w-6 h-6 rounded-full bg-blue-600 text-white text-xs font-bold flex items-center justify-center mt-0.5">
@@ -107,16 +120,9 @@ export default function JobCard({ job, position, onUpdate, dragHandle }: Props) 
               <p className="font-semibold text-gray-900 text-sm">{job.customerName}</p>
               <p className="text-xs text-gray-500 mt-0.5">{job.address}, {job.postcode}</p>
             </div>
-            <div className="flex items-center gap-1.5 flex-shrink-0">
-              {job.locked && (
-                <span className="flex items-center gap-1 text-xs font-medium px-2 py-0.5 rounded-full bg-amber-100 text-amber-700">
-                  <Lock className="w-3 h-3" /> Locked
-                </span>
-              )}
-              <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_COLOUR[job.status]}`}>
-                {STATUS_LABEL[job.status]}
-              </span>
-            </div>
+            <span className={`flex-shrink-0 text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_COLOUR[job.status]}`}>
+              {STATUS_LABEL[job.status]}
+            </span>
           </div>
 
           {/* Type + CC badge + plate + navigate */}
