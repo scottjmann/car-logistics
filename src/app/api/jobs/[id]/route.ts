@@ -16,15 +16,20 @@ export async function PATCH(
     coords = await geocode(addr);
   }
 
-  const job = await prisma.job.update({
-    where: { id },
-    data: {
-      ...body,
-      ...(coords ? { lat: coords.lat, lng: coords.lng } : {}),
-    },
-  });
-
-  return NextResponse.json(job);
+  try {
+    const job = await prisma.job.update({
+      where: { id },
+      data: {
+        ...body,
+        ...(coords ? { lat: coords.lat, lng: coords.lng } : {}),
+      },
+    });
+    return NextResponse.json(job);
+  } catch (err) {
+    console.error("[PATCH /api/jobs/:id]", err);
+    const message = err instanceof Error ? err.message : "Update failed";
+    return NextResponse.json({ error: message }, { status: 500 });
+  }
 }
 
 export async function DELETE(

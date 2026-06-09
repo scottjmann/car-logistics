@@ -65,11 +65,15 @@ export default function JobCard({ job, position, onUpdate, dragHandle }: Props) 
   }
 
   async function toggleLock() {
-    await fetch(`/api/jobs/${job.id}`, {
+    const res = await fetch(`/api/jobs/${job.id}`, {
       method: "PATCH",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ locked: !job.locked }),
+      body: JSON.stringify({ locked: { set: !job.locked } }),
     });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      alert(`Failed to toggle lock: ${err.error ?? res.status}`);
+    }
     onUpdate();
   }
 
@@ -79,7 +83,7 @@ export default function JobCard({ job, position, onUpdate, dragHandle }: Props) 
   const isDone = job.status === "done";
 
   return (
-    <div className={`bg-white border rounded-xl shadow-sm transition-opacity overflow-hidden ${isDone ? "opacity-60" : ""} ${job.locked ? "border-amber-400 border-2" : ""}`}>
+    <div className={`bg-white rounded-xl shadow-sm transition-opacity overflow-hidden ${isDone ? "opacity-60" : ""} ${job.locked ? "border-2 border-amber-400" : "border"}`}>
       {/* Locked banner */}
       {job.locked && (
         <div className="bg-amber-400 px-3 py-1 flex items-center gap-1.5">
